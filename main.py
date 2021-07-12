@@ -5,10 +5,15 @@ import os
 import datetime as dt
 
 
-cap = cv.VideoCapture(0)
-fourcc = cv.VideoWriter_fourcc(*"XVID")     
+DIRS = {0: "First",
+        1: "Second",
+        2: "Third"}
+
+fourcc = cv.VideoWriter_fourcc(*"XVID")
+
+caps = [cv.VideoCapture(i) for i in range(3)]
 name = str(dt.datetime.now()).replace(":", ".") + ".avi"
-out = cv.VideoWriter(name, fourcc, 30.0, (640, 480))
+outs = [cv.VideoWriter("./" + os.path.join("Дивы", dir, name), fourcc, 30.0, (640, 480)) for dir in DIRS.values()]
 
 
 interval = 1 * 5
@@ -16,38 +21,36 @@ interval = 1 * 5
 begin = time()
 
 
-if not cap.isOpened():
+if not all([cap.isOpened() for cap in caps]):
     print("Cannot open camera")
     exit()
 
 
 
 while True:
-
     if time() - begin >= interval:
-        out.release()  
-        videos = sorted([name for name in os.listdir() if name.split(".")[-1] == "avi"], key=lambda x: dt.datetime.fromisoformat(x.replace(".", ":", 2).replace(".avi", "")))
-        print(videos)
-        os.remove(videos[0])
-        name = str(dt.datetime.now()).replace(":", ".") + ".avi"
-        out = cv.VideoWriter(name, fourcc, 30.0, (640, 480))
+        print("this")
+        for i, out in enumerate(outs):
+            out.release()
+
+            name = str(dt.datetime.now()).replace(":", ".") + ".avi"
+            outs[i] = cv.VideoWriter("./" + os.path.join("Дивы", list(DIRS.values())[i], name), fourcc, 30.0, (640, 480))
         begin = time()
-
-    ret, frame = cap.read()
-    if not ret:
-        print("Can't receive frame (stream end?). Exiting ...")
-        break
-
-
-    out.write(frame)
-    cv.imshow('frame', frame)
+    for i, cap in enumerate(caps):
+        ret, frame = cap.read()
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
+        outs[i].write(frame)
+        cv.imshow('frame', frame)
 
 
     if cv.waitKey(1) == ord('q'):
         break
 
+for out, cap in zip(outs, caps):
+    out.release()
+    cap.release()
 
 
-out.release()
-cap.release()
 cv.destroyAllWindows()
